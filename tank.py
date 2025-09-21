@@ -139,7 +139,7 @@ class Tank(pygame.sprite.Sprite):
         position: Tuple[int, int],
         speed: float,
         playfield: pygame.Rect,
-        health: int = 3,
+        health: int = 4,
         reload_ms: int = 450,
     ) -> None:
         super().__init__()
