@@ -155,18 +155,55 @@ class Tank(pygame.sprite.Sprite):
         self._last_shot = 0
         self._move_vector = pygame.Vector2(0, 0)
 
-    def move(self, direction: pygame.Vector2, dt: float) -> None:
+    def move(self, direction: pygame.Vector2, dt: float, blockers: Iterable[pygame.sprite.Sprite] | None = None) -> None:
         self._move_vector = pygame.Vector2(direction)
         if self._move_vector.length_squared() > 0:
             self._move_vector = self._move_vector.normalize()
             self.orientation = orientation_from_vector(self._move_vector)
             self.image = self.images[self.orientation]
-        displacement = self._move_vector * self.speed * dt
-        self.position += displacement
-        self.rect.center = (round(self.position.x), round(self.position.y))
-        if not self.playfield.contains(self.rect):
-            self.rect.clamp_ip(self.playfield)
-            self.position = pygame.Vector2(self.rect.center)
+
+        # Intended displacement this frame
+        dx, dy = (self._move_vector * self.speed * dt)
+
+        # Move horizontally and resolve collisions
+        if dx != 0:
+            self.position.x += dx
+            self.rect.centerx = round(self.position.x)
+            # Keep within playfield horizontally
+            if not self.playfield.contains(self.rect):
+                self.rect.clamp_ip(self.playfield)
+                self.position.x = self.rect.centerx
+            # Collide with blockers (other tanks)
+            if blockers is not None:
+                for b in blockers:
+                    if b is self:
+                        continue
+                    if hasattr(b, "rect") and self.rect.colliderect(b.rect):
+                        if dx > 0:
+                            self.rect.right = b.rect.left
+                        else:
+                            self.rect.left = b.rect.right
+                        self.position.x = self.rect.centerx
+
+        # Move vertically and resolve collisions
+        if dy != 0:
+            self.position.y += dy
+            self.rect.centery = round(self.position.y)
+            # Keep within playfield vertically
+            if not self.playfield.contains(self.rect):
+                self.rect.clamp_ip(self.playfield)
+                self.position.y = self.rect.centery
+            # Collide with blockers (other tanks)
+            if blockers is not None:
+                for b in blockers:
+                    if b is self:
+                        continue
+                    if hasattr(b, "rect") and self.rect.colliderect(b.rect):
+                        if dy > 0:
+                            self.rect.bottom = b.rect.top
+                        else:
+                            self.rect.top = b.rect.bottom
+                        self.position.y = self.rect.centery
 
     def can_fire(self, now_ms: int) -> bool:
         return (now_ms - self._last_shot) >= self.reload_ms
@@ -252,6 +289,7 @@ class EnemyController:
         bullets: pygame.sprite.Group,
         bullet_images: Dict[str, pygame.Surface],
         now_ms: int,
+        blockers: Iterable[pygame.sprite.Sprite] | None = None,
     ) -> None:
         self._decision_timer -= dt
         target_vec = pygame.Vector2(target_pos)
@@ -259,7 +297,7 @@ class EnemyController:
             self._direction = self._pick_direction(target_vec)
             self._decision_timer = random.uniform(0.35, 0.9)
         previous_center = self.tank.rect.center
-        self.tank.move(self._direction, dt)
+        self.tank.move(self._direction, dt, blockers=blockers)
         if self.tank.rect.center == previous_center and self._direction.length_squared() > 0:
             self._decision_timer = 0
         aligned_horizontally = abs(self.tank.rect.centery - target_vec.y) <= 18
@@ -287,7 +325,7 @@ def draw_playfield(surface: pygame.Surface, area: pygame.Rect) -> None:
         pygame.draw.line(surface, inner_color, (area.left, y), (area.right, y), 1)
 
 
-def handle_player_input(player: Tank, keys: Iterable[bool], dt: float) -> None:
+def handle_player_input(player: Tank, keys: Iterable[bool], dt: float, blockers: Iterable[pygame.sprite.Sprite] | None = None) -> None:
     direction = pygame.Vector2(0, 0)
     if keys[pygame.K_a] or keys[pygame.K_LEFT]:
         direction.x -= 1
@@ -297,7 +335,7 @@ def handle_player_input(player: Tank, keys: Iterable[bool], dt: float) -> None:
         direction.y -= 1
     if keys[pygame.K_s] or keys[pygame.K_DOWN]:
         direction.y += 1
-    player.move(direction, dt)
+    player.move(direction, dt, blockers=blockers)
 
 
 def main() -> None:
@@ -335,11 +373,11 @@ def main() -> None:
         keys = pygame.key.get_pressed()
 
         if state == "playing":
-            handle_player_input(player, keys, dt)
+            handle_player_input(player, keys, dt, blockers=tanks)
             if keys[pygame.K_SPACE] or keys[pygame.K_LCTRL]:
                 player.shoot(bullet_images, player_bullets, now_ms)
 
-            enemy_ai.update(dt, player.rect.center, enemy_bullets, bullet_images, now_ms)
+            enemy_ai.update(dt, player.rect.center, enemy_bullets, bullet_images, now_ms, blockers=tanks)
 
             player_bullets.update(dt)
             enemy_bullets.update(dt)
