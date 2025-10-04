@@ -55,6 +55,21 @@ BULLET_PALETTE: Dict[str, Tuple[int, int, int]] = {
     "1": (240, 222, 120),
 }
 
+OBSTACLE_PATTERN = [
+    "1111111111111111111111111",
+    "1111111111111111111111111",
+    "1111111111111111111111111",
+    "1111111111111111111111111",
+    "1111111111111111111111111",
+    "1111111111111111111111111",
+    "1111111111111111111111111",
+    "1111111111111111111111111",
+]
+
+OBSTACLE_PALETTE: Dict[str, Tuple[int, int, int]] = {
+    "1": (94, 84, 142),
+}
+
 
 def create_pixel_surface(pattern: Iterable[str], palette: Dict[str, Tuple[int, int, int]], pixel_size: int) -> pygame.Surface:
     """Create a pygame Surface from a pixel pattern and palette."""
@@ -89,6 +104,11 @@ def create_bullet_images(pattern: Iterable[str], palette: Dict[str, Tuple[int, i
         "down": pygame.transform.rotate(base, 180),
         "left": pygame.transform.rotate(base, 90),
     }
+
+
+def create_obstacle_image(pattern: Iterable[str], palette: Dict[str, Tuple[int, int, int]], pixel_size: int) -> pygame.Surface:
+    """Create a pygame Surface for obstacles."""
+    return create_pixel_surface(pattern, palette, pixel_size)
 
 
 def orientation_from_vector(direction: pygame.Vector2) -> str:
@@ -304,6 +324,20 @@ class Tank(pygame.sprite.Sprite):
         return self.health > 0
 
 
+class Obstacle(pygame.sprite.Sprite):
+    """Static obstacle that blocks tank movement and bullets."""
+
+    def __init__(
+        self,
+        image: pygame.Surface,
+        position: Tuple[int, int],
+    ) -> None:
+        super().__init__()
+        self.image = image
+        self.rect = self.image.get_rect(center=position)
+        self.position = pygame.Vector2(self.rect.center)
+
+
 def bullet_hits(target: Tank, projectiles: pygame.sprite.Group) -> bool:
     """Check if any projectile has struck the given tank."""
     collisions = pygame.sprite.spritecollide(target, projectiles, dokill=True)
@@ -377,6 +411,74 @@ def draw_playfield(surface: pygame.Surface, area: pygame.Rect) -> None:
         pygame.draw.line(surface, inner_color, (area.left, y), (area.right, y), 1)
 
 
+from math import sqrt
+
+def is_position_clear(position: Tuple[int, int], obstacles: pygame.sprite.Group,
+                     player_pos: Tuple[int, int], enemy_pos: Tuple[int, int],
+                     safe_radius: int = 80) -> bool:
+    """Check if a position is clear of obstacles and away from spawn points."""
+
+    # Check distance from player spawn point
+    if sqrt((position[0] - player_pos[0])**2 + (position[1] - player_pos[1])**2) < safe_radius:
+        return False
+
+    # Check distance from enemy spawn point
+    if sqrt((position[0] - enemy_pos[0])**2 + (position[1] - enemy_pos[1])**2) < safe_radius:
+        return False
+
+    # Check distance from existing obstacles
+    temp_obstacle = Obstacle(pygame.Surface((32, 32)), position)
+    for obstacle in obstacles:
+        if temp_obstacle.rect.colliderect(obstacle.rect):
+            return False
+
+    return True
+
+
+def generate_random_obstacles(obstacle_image: pygame.Surface, playfield: pygame.Rect,
+                            player_pos: Tuple[int, int], enemy_pos: Tuple[int, int],
+                            num_obstacles: int = 6) -> pygame.sprite.Group:
+    """Generate randomly placed obstacles with good distribution."""
+    obstacles = pygame.sprite.Group()
+
+    # Define spawn areas (avoiding the edges where tanks spawn)
+    min_x = playfield.left + 100
+    max_x = playfield.right - 100
+    min_y = playfield.top + 100
+    max_y = playfield.bottom - 100
+
+    attempts = 0
+    max_attempts = 1000
+
+    while len(obstacles) < num_obstacles and attempts < max_attempts:
+        # Generate random position within the spawn area
+        x = random.randint(min_x, max_x)
+        y = random.randint(min_y, max_y)
+
+        # Ensure obstacles are not too close to each other
+        temp_obstacle = Obstacle(obstacle_image, (x, y))
+        too_close = False
+
+        for existing_obstacle in obstacles:
+            if temp_obstacle.rect.colliderect(existing_obstacle.rect):
+                too_close = True
+                break
+
+            # Check minimum distance between obstacles
+            center_distance = sqrt((x - existing_obstacle.rect.centerx)**2 +
+                                 (y - existing_obstacle.rect.centery)**2)
+            if center_distance < 100:
+                too_close = True
+                break
+
+        if not too_close and is_position_clear((x, y), obstacles, player_pos, enemy_pos):
+            obstacles.add(temp_obstacle)
+
+        attempts += 1
+
+    return obstacles
+
+
 def handle_player_input(player: Tank, keys: Iterable[bool], dt: float, blockers: Iterable[pygame.sprite.Sprite] | None = None) -> None:
     direction = pygame.Vector2(0, 0)
     if keys[pygame.K_a] or keys[pygame.K_LEFT]:
@@ -402,6 +504,12 @@ def main() -> None:
     player_images = create_tank_images(PLAYER_TANK_PATTERN, PLAYER_TANK_PALETTE, PIXEL_SIZE)
     enemy_images = create_tank_images(ENEMY_TANK_PATTERN, ENEMY_TANK_PALETTE, PIXEL_SIZE)
     bullet_images = create_bullet_images(BULLET_PATTERN, BULLET_PALETTE, PIXEL_SIZE)
+    obstacle_image = create_obstacle_image(OBSTACLE_PATTERN, OBSTACLE_PALETTE, PIXEL_SIZE)
+
+    # Generate random obstacles with good distribution
+    player_spawn = (playfield.left + 70, playfield.bottom - 70)
+    enemy_spawn = (playfield.right - 70, playfield.top + 70)
+    obstacles = generate_random_obstacles(obstacle_image, playfield, player_spawn, enemy_spawn, num_obstacles=6)
 
     player = Tank(player_images, (playfield.left + 70, playfield.bottom - 70), speed=140.0, playfield=playfield)
     enemy = Tank(enemy_images, (playfield.right - 70, playfield.top + 70), speed=110.0, playfield=playfield)
@@ -425,14 +533,18 @@ def main() -> None:
         keys = pygame.key.get_pressed()
 
         if state == "playing":
-            handle_player_input(player, keys, dt, blockers=tanks)
+            handle_player_input(player, keys, dt, blockers=list(tanks) + list(obstacles))
             if keys[pygame.K_SPACE] or keys[pygame.K_LCTRL]:
                 player.shoot(bullet_images, player_bullets, now_ms)
 
-            enemy_ai.update(dt, player.rect.center, enemy_bullets, bullet_images, now_ms, blockers=tanks)
+            enemy_ai.update(dt, player.rect.center, enemy_bullets, bullet_images, now_ms, blockers=list(tanks) + list(obstacles))
 
             player_bullets.update(dt)
             enemy_bullets.update(dt)
+
+            # Check bullet collisions with obstacles
+            pygame.sprite.groupcollide(player_bullets, obstacles, True, False)
+            pygame.sprite.groupcollide(enemy_bullets, obstacles, True, False)
 
             if bullet_hits(enemy, player_bullets):
                 if enemy.take_hit():
@@ -446,6 +558,7 @@ def main() -> None:
 
         draw_playfield(screen, playfield)
         tanks.draw(screen)
+        obstacles.draw(screen)
         player_bullets.draw(screen)
         enemy_bullets.draw(screen)
 
