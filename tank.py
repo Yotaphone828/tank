@@ -13,6 +13,8 @@ PIXEL_SIZE = 4
 COLOR_BACKGROUND = (18, 20, 26)
 
 PLAYER_TANK_PATTERN = [
+    "...11..11....",
+    "...11..11....",
     "...111111....",
     "..111333111..",
     ".11133333111.",
@@ -21,12 +23,10 @@ PLAYER_TANK_PATTERN = [
     ".11233332211.",
     ".11233332211.",
     ".11223332211.",
-    ".11223332211.",
     ".11133333111.",
     "..111333111..",
-    "...111111....",
-    "...11..11....",
-    "...11..11....",
+    ".11133333111.",
+    "..111333111..",
 ]
 
 ENEMY_TANK_PATTERN = PLAYER_TANK_PATTERN
@@ -94,6 +94,20 @@ def create_tank_images(pattern: Iterable[str], palette: Dict[str, Tuple[int, int
         "down": pygame.transform.rotate(base, 180),
         "left": pygame.transform.rotate(base, 90),
     }
+
+
+def get_bullet_spawn_offset(tank_rect: pygame.Rect, orientation: str, bullet_images: Dict[str, pygame.Surface]) -> Tuple[int, int]:
+    """Calculate the spawn offset for bullets based on tank orientation."""
+    if orientation == "up":
+        offset_x, offset_y = 0, bullet_images["up"].get_height() // 2
+    elif orientation == "down":
+        offset_x, offset_y = 0, -bullet_images["down"].get_height() // 2
+    elif orientation == "left":
+        offset_x, offset_y = bullet_images["left"].get_width() // 2, 0
+    else:  # right
+        offset_x, offset_y = -bullet_images["right"].get_width() // 2, 0
+
+    return offset_x, offset_y
 
 
 def create_bullet_images(pattern: Iterable[str], palette: Dict[str, Tuple[int, int, int]], pixel_size: int) -> Dict[str, pygame.Surface]:
@@ -289,21 +303,42 @@ class Tank(pygame.sprite.Sprite):
     ) -> None:
         if not self.can_fire(now_ms):
             return
+
+        # Clear direction map - we'll use orientation directly
         direction_map = {
-            "up": pygame.Vector2(0, -1),
-            "down": pygame.Vector2(0, 1),
-            "left": pygame.Vector2(-1, 0),
-            "right": pygame.Vector2(1, 0),
+            "up": pygame.Vector2(0, -1),    # Up = negative Y
+            "down": pygame.Vector2(0, 1),   # Down = positive Y
+            "left": pygame.Vector2(-1, 0),  # Left = negative X
+            "right": pygame.Vector2(1, 0),  # Right = positive X
         }
         direction = direction_map[self.orientation]
-        if self.orientation in {"up", "down"}:
-            muzzle_distance = self.image.get_height() // 2
-            bullet_half = bullet_images[self.orientation].get_height() // 2
-        else:
-            muzzle_distance = self.image.get_width() // 2
-            bullet_half = bullet_images[self.orientation].get_width() // 2
-        offset = direction * (muzzle_distance + bullet_half)
-        spawn_position = self.position + offset
+
+        # Get bullet dimensions
+        bullet_image = bullet_images[self.orientation]
+        bullet_width = bullet_image.get_width()
+        bullet_height = bullet_image.get_height()
+
+        # Calculate spawn position based on tank's current position and orientation
+        # Spawn bullets from the front of the tank in the direction it's facing
+        if self.orientation == "up":
+            # Tank facing up: spawn from top center
+            spawn_x = self.rect.centerx
+            spawn_y = self.rect.top - bullet_height // 2
+        elif self.orientation == "down":
+            # Tank facing down: spawn from bottom center
+            spawn_x = self.rect.centerx
+            spawn_y = self.rect.bottom + bullet_height // 2
+        elif self.orientation == "left":
+            # Tank facing left: spawn from left center
+            spawn_x = self.rect.left - bullet_width // 2
+            spawn_y = self.rect.centery
+        else:  # right
+            # Tank facing right: spawn from right center
+            spawn_x = self.rect.right + bullet_width // 2
+            spawn_y = self.rect.centery
+
+        spawn_position = pygame.Vector2(spawn_x, spawn_y)
+
         bullet = Bullet(
             bullet_images,
             spawn_position,
