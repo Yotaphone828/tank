@@ -1,4 +1,4 @@
-"""AI system for enemy tank behavior."""
+"""敌方坦克行为的AI系统。"""
 
 import random
 from typing import Iterable, Tuple
@@ -13,7 +13,7 @@ from config import (
 
 
 class EnemyController:
-    """Lightweight AI that drives the enemy tank."""
+    """驱动敌方坦克的轻量级AI。"""
 
     def __init__(self, tank: "entities.Tank") -> None:
         self.tank = tank
@@ -21,7 +21,7 @@ class EnemyController:
         self._decision_timer = 0.0
 
     def _pick_direction(self, target_pos: pygame.Vector2) -> pygame.Vector2:
-        """Pick movement direction with target-seeking behavior."""
+        """具有目标寻找行为的移动方向选择。"""
         if random.random() < AI_TARGET_SEEK_PROBABILITY:
             delta = target_pos - pygame.Vector2(self.tank.rect.center)
             if abs(delta.x) > abs(delta.y):
@@ -46,7 +46,7 @@ class EnemyController:
         now_ms: int,
         blockers: Iterable[pygame.sprite.Sprite] | None = None,
     ) -> None:
-        """Update AI behavior including movement and shooting."""
+        """更新AI行为，包括移动和射击。"""
         self._decision_timer -= dt
         target_vec = pygame.Vector2(target_pos)
         if self._decision_timer <= 0:

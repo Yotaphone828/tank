@@ -1,14 +1,14 @@
-"""Configuration constants and game settings."""
+"""配置常量和游戏设置。"""
 
 from typing import Dict, Tuple, Iterable
 
-# Window and display settings
+# 窗口和显示设置
 WINDOW_SIZE: Tuple[int, int] = (640, 480)
 FPS = 60
 PIXEL_SIZE = 4
 COLOR_BACKGROUND = (18, 20, 26)
 
-# Tank patterns and palettes
+# 坦克图案和调色板
 PLAYER_TANK_PATTERN = [
     "...11..11....",
     "...11..11....",
@@ -40,7 +40,7 @@ ENEMY_TANK_PALETTE: Dict[str, Tuple[int, int, int]] = {
     "3": (214, 132, 92),
 }
 
-# Bullet patterns and palettes
+# 子弹图案和调色板
 BULLET_PATTERN = [
     "..1..",
     ".111.",
@@ -53,7 +53,7 @@ BULLET_PALETTE: Dict[str, Tuple[int, int, int]] = {
     "1": (240, 222, 120),
 }
 
-# Obstacle patterns and palettes
+# 障碍物图案和调色板
 OBSTACLE_PATTERN = [
     "1111111111111111111111111",
     "1111111111111111111111111",
@@ -69,29 +69,29 @@ OBSTACLE_PALETTE: Dict[str, Tuple[int, int, int]] = {
     "1": (94, 84, 142),
 }
 
-# Tank settings
+# 坦克设置
 DEFAULT_TANK_HEALTH = 4
 DEFAULT_TANK_RELOAD_MS = 450
 PLAYER_TANK_SPEED = 140.0
 ENEMY_TANK_SPEED = 110.0
 BULLET_SPEED = 360.0
 
-# Obstacle settings
+# 障碍物设置
 DEFAULT_OBSTACLES = 6
 OBSTACLE_SAFE_RADIUS = 80
 OBSTACLE_MIN_DISTANCE = 100
 
-# AI settings
+# AI设置
 AI_DECISION_MIN_TIME = 0.35
 AI_DECISION_MAX_TIME = 0.9
 AI_TARGET_SEEK_PROBABILITY = 0.6
 AI_RANDOM_FIRE_PROBABILITY = 0.008
 
-# Collision detection settings
+# 碰撞检测设置
 COLLISION_PUSH_DISTANCE = 2
 TANK_COLLISION_THRESHOLD = 35
 
-# Spawn point settings
+# 生成点设置
 PLAYER_SPAWN_OFFSET_X = 70
 PLAYER_SPAWN_OFFSET_Y = 70
 ENEMY_SPAWN_OFFSET_X = 70

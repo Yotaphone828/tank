@@ -1,4 +1,4 @@
-"""Pixel art rendering and graphics creation functions."""
+"""像素艺术渲染和图形创建函数。"""
 
 from typing import Dict, Iterable, Tuple
 import pygame
@@ -18,7 +18,7 @@ from config import (
 
 
 def create_pixel_surface(pattern: Iterable[str], palette: Dict[str, Tuple[int, int, int]], pixel_size: int) -> pygame.Surface:
-    """Create a pygame Surface from a pixel pattern and palette."""
+    """从像素图案和调色板创建pygame Surface。"""
     rows = list(pattern)
     height = len(rows)
     width = len(rows[0]) if rows else 0
@@ -33,7 +33,7 @@ def create_pixel_surface(pattern: Iterable[str], palette: Dict[str, Tuple[int, i
 
 
 def create_tank_images(pattern: Iterable[str], palette: Dict[str, Tuple[int, int, int]], pixel_size: int) -> Dict[str, pygame.Surface]:
-    """Create directional tank images from a base pattern."""
+    """从基础图案创建方向性坦克图像。"""
     base = create_pixel_surface(pattern, palette, pixel_size)
     return {
         "up": base,
@@ -44,7 +44,7 @@ def create_tank_images(pattern: Iterable[str], palette: Dict[str, Tuple[int, int
 
 
 def create_bullet_images(pattern: Iterable[str], palette: Dict[str, Tuple[int, int, int]], pixel_size: int) -> Dict[str, pygame.Surface]:
-    """Create directional bullet images from a base pattern."""
+    """从基础图案创建方向性子弹图像。"""
     base = create_pixel_surface(pattern, palette, pixel_size)
     return {
         "up": base,
@@ -55,12 +55,12 @@ def create_bullet_images(pattern: Iterable[str], palette: Dict[str, Tuple[int, i
 
 
 def create_obstacle_image(pattern: Iterable[str], palette: Dict[str, Tuple[int, int, int]], pixel_size: int) -> pygame.Surface:
-    """Create an obstacle image from a pattern."""
+    """从图案创建障碍物图像。"""
     return create_pixel_surface(pattern, palette, pixel_size)
 
 
 def get_bullet_spawn_offset(tank_rect: pygame.Rect, orientation: str, bullet_images: Dict[str, pygame.Surface]) -> Tuple[int, int]:
-    """Calculate the spawn offset for bullets based on tank orientation."""
+    """根据坦克朝向计算子弹生成偏移。"""
     if orientation == "up":
         offset_x, offset_y = 0, bullet_images["up"].get_height() // 2
     elif orientation == "down":
@@ -74,7 +74,7 @@ def get_bullet_spawn_offset(tank_rect: pygame.Rect, orientation: str, bullet_ima
 
 
 def orientation_from_vector(direction: pygame.Vector2) -> str:
-    """Return the closest cardinal orientation string from a vector."""
+    """从向量返回最近的基点方向字符串。"""
     if direction.length_squared() == 0:
         return "up"
     if abs(direction.x) > abs(direction.y):
@@ -83,7 +83,7 @@ def orientation_from_vector(direction: pygame.Vector2) -> str:
 
 
 def draw_playfield(surface: pygame.Surface, area: pygame.Rect) -> None:
-    """Draw the game playfield with border and grid."""
+    """绘制游戏场地，包括边框和网格。"""
     surface.fill(COLOR_BACKGROUND)
     border_color = (52, 56, 68)
     inner_color = (32, 36, 46)
@@ -96,7 +96,7 @@ def draw_playfield(surface: pygame.Surface, area: pygame.Rect) -> None:
 
 
 def create_game_images() -> Tuple[Dict[str, pygame.Surface], Dict[str, pygame.Surface], Dict[str, pygame.Surface], pygame.Surface]:
-    """Create all game images and return them."""
+    """创建所有游戏图像并返回它们。"""
     player_images = create_tank_images(PLAYER_TANK_PATTERN, PLAYER_TANK_PALETTE, PIXEL_SIZE)
     enemy_images = create_tank_images(ENEMY_TANK_PATTERN, ENEMY_TANK_PALETTE, PIXEL_SIZE)
     bullet_images = create_bullet_images(BULLET_PATTERN, BULLET_PALETTE, PIXEL_SIZE)

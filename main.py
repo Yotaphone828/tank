@@ -1,4 +1,4 @@
-"""Main entry point for the tank battle game."""
+"""坦克大战游戏的主入口点。"""
 
 if __name__ == "__main__":
     from game import main

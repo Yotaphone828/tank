@@ -1,4 +1,4 @@
-"""Core game logic and main game loop."""
+"""核心游戏逻辑和主游戏循环。"""
 
 import math
 import random
@@ -22,7 +22,7 @@ from ai import EnemyController
 
 
 def bullet_hits(target: Tank, projectiles: pygame.sprite.Group) -> bool:
-    """Check if any projectile has struck the given tank."""
+    """检查任何投射物是否击中了给定的坦克。"""
     collisions = pygame.sprite.spritecollide(target, projectiles, dokill=True)
     return bool(collisions)
 
@@ -30,16 +30,16 @@ def bullet_hits(target: Tank, projectiles: pygame.sprite.Group) -> bool:
 def is_position_clear(position: Tuple[int, int], obstacles: pygame.sprite.Group,
                      player_pos: Tuple[int, int], enemy_pos: Tuple[int, int],
                      safe_radius: int = OBSTACLE_SAFE_RADIUS) -> bool:
-    """Check if a position is clear of obstacles and away from spawn points."""
-    # Check distance from player spawn point
+    """检查位置是否没有障碍物且远离生成点。"""
+    # 检查与玩家生成点的距离
     if math.sqrt((position[0] - player_pos[0])**2 + (position[1] - player_pos[1])**2) < safe_radius:
         return False
 
-    # Check distance from enemy spawn point
+    # 检查与敌方生成点的距离
     if math.sqrt((position[0] - enemy_pos[0])**2 + (position[1] - enemy_pos[1])**2) < safe_radius:
         return False
 
-    # Check distance from existing obstacles
+    # 检查与现有障碍物的距离
     temp_obstacle = Obstacle(pygame.Surface((32, 32)), position)
     for obstacle in obstacles:
         if temp_obstacle.rect.colliderect(obstacle.rect):
@@ -51,10 +51,10 @@ def is_position_clear(position: Tuple[int, int], obstacles: pygame.sprite.Group,
 def generate_random_obstacles(obstacle_image: pygame.Surface, playfield: pygame.Rect,
                             player_pos: Tuple[int, int], enemy_pos: Tuple[int, int],
                             num_obstacles: int = DEFAULT_OBSTACLES) -> pygame.sprite.Group:
-    """Generate randomly placed obstacles with good distribution."""
+    """生成随机分布的障碍物，具有良好的分布效果。"""
     obstacles = pygame.sprite.Group()
 
-    # Define spawn areas (avoiding the edges where tanks spawn)
+    # 定义生成区域（避开坦克生成的边缘）
     min_x = playfield.left + 100
     max_x = playfield.right - 100
     min_y = playfield.top + 100
@@ -93,7 +93,7 @@ def generate_random_obstacles(obstacle_image: pygame.Surface, playfield: pygame.
 
 
 def handle_player_input(player: Tank, keys, dt: float, blockers: list) -> None:
-    """Handle player input and update tank movement."""
+    """处理玩家输入并更新坦克移动。"""
     direction = pygame.Vector2(0, 0)
     if keys[pygame.K_a] or keys[pygame.K_LEFT]:
         direction.x -= 1
@@ -107,7 +107,7 @@ def handle_player_input(player: Tank, keys, dt: float, blockers: list) -> None:
 
 
 class TankGame:
-    """Main game class handling initialization and game loop."""
+    """处理初始化和主游戏循环的主要游戏类。"""
 
     def __init__(self):
         pygame.init()
@@ -117,10 +117,10 @@ class TankGame:
         self.font = pygame.font.SysFont("Consolas", 22)
         self.state = "playing"
 
-        # Create playfield
+        # 创建游戏场地
         self.playfield = pygame.Rect(48, 48, WINDOW_SIZE[0] - 96, WINDOW_SIZE[1] - 96)
 
-        # Create game images
+        # 创建游戏图像
         self.player_images, self.enemy_images, self.bullet_images, self.obstacle_image = create_game_images()
 
         # Generate random obstacles with good distribution
@@ -146,13 +146,13 @@ class TankGame:
         self.running = True
 
     def handle_events(self):
-        """Handle pygame events."""
+        """处理pygame事件。"""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
 
     def update_game(self, dt: float, now_ms: int):
-        """Update game state."""
+        """更新游戏状态。"""
         keys = pygame.key.get_pressed()
 
         # Handle player input
@@ -187,11 +187,11 @@ class TankGame:
                 self.state = "defeat"
 
     def render_game(self):
-        """Render the game."""
-        # Clear screen and draw playfield
+        """渲染游戏。"""
+        # 清空屏幕并绘制游戏场地
         draw_playfield(self.screen, self.playfield)
 
-        # Draw all sprites
+        # 绘制所有精灵
         self.tanks.draw(self.screen)
         self.obstacles.draw(self.screen)
         self.player_bullets.draw(self.screen)
@@ -209,7 +209,7 @@ class TankGame:
         pygame.display.flip()
 
     def draw_hud(self):
-        """Draw game HUD with health information."""
+        """绘制游戏HUD，显示生命值信息。"""
         hud_color = (218, 218, 218)
         player_text = self.font.render(f"Player HP: {max(self.player.health, 0)}", True, hud_color)
         enemy_text = self.font.render(f"Enemy HP: {max(self.enemy.health, 0)}", True, hud_color)
@@ -217,19 +217,19 @@ class TankGame:
         self.screen.blit(enemy_text, (self.playfield.left, self.playfield.bottom + 12 + player_text.get_height() + 4))
 
     def draw_game_over(self, message: str):
-        """Draw game over message."""
+        """绘制游戏结束消息。"""
         hud_color = (218, 218, 218)
         message_surface = self.font.render(message, True, hud_color)
         self.screen.blit(message_surface, message_surface.get_rect(center=(WINDOW_SIZE[0] // 2, 36)))
 
     def handle_input_after_game_over(self):
-        """Handle input when game is over."""
+        """游戏结束时处理输入。"""
         keys = pygame.key.get_pressed()
         if self.state != "playing" and (keys[pygame.K_ESCAPE] or keys[pygame.K_q]):
             self.running = False
 
     def run(self):
-        """Main game loop."""
+        """主游戏循环。"""
         while self.running:
             dt = self.clock.tick(60) / 1000.0
             now_ms = pygame.time.get_ticks()
@@ -246,7 +246,7 @@ class TankGame:
 
 
 def main():
-    """Entry point for the game."""
+    """游戏入口点。"""
     game = TankGame()
     game.run()
 

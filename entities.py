@@ -1,4 +1,4 @@
-"""Game entity classes: Tank, Bullet, and Obstacle."""
+"""游戏实体类：坦克、子弹和障碍物。"""
 
 from typing import Dict, Iterable, Tuple
 import pygame
@@ -14,7 +14,7 @@ from graphics import orientation_from_vector, get_bullet_spawn_offset
 
 
 class Bullet(pygame.sprite.Sprite):
-    """Projectile entity with physics and boundary checking."""
+    """带有物理和边界检查的投射物实体。"""
 
     def __init__(
         self,
@@ -41,7 +41,7 @@ class Bullet(pygame.sprite.Sprite):
         self.position = pygame.Vector2(self.rect.center)
 
     def update(self, dt: float) -> None:
-        """Update bullet position and remove if out of bounds."""
+        """更新子弹位置，如果超出边界则移除。"""
         self.position += self.direction * self.speed * dt
         self.rect.center = (round(self.position.x), round(self.position.y))
         if not self.playfield.colliderect(self.rect):
@@ -49,7 +49,7 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class Tank(pygame.sprite.Sprite):
-    """Main game entity with movement, shooting, health, and collision detection."""
+    """具有移动、射击、生命值和碰撞检测功能的主要游戏实体。"""
 
     def __init__(
         self,
@@ -74,32 +74,32 @@ class Tank(pygame.sprite.Sprite):
         self._move_vector = pygame.Vector2(0, 0)
 
     def move(self, direction: pygame.Vector2, dt: float, blockers: Iterable[pygame.sprite.Sprite] | None = None) -> None:
-        """Move tank with collision resolution and sliding mechanics."""
+        """移动坦克，带有碰撞检测和滑动机制。"""
         self._move_vector = pygame.Vector2(direction)
         if self._move_vector.length_squared() > 0:
             self._move_vector = self._move_vector.normalize()
             self.orientation = orientation_from_vector(self._move_vector)
             self.image = self.images[self.orientation]
 
-        # Intended displacement this frame
+        # 本帧的预期位移
         dx, dy = (self._move_vector * self.speed * dt)
 
-        # Store original position
+        # 存储原始位置
         original_pos = pygame.Vector2(self.position)
 
-        # Try to move diagonally or horizontally
+        # 尝试斜向或水平移动
         if dx != 0 or dy != 0:
             self.position.x += dx
             self.position.y += dy
             self.rect.center = (round(self.position.x), round(self.position.y))
 
-            # Keep within playfield
+            # 保持在游戏场地内
             if not self.playfield.contains(self.rect):
                 self.rect.clamp_ip(self.playfield)
                 self.position.x = self.rect.centerx
                 self.position.y = self.rect.centery
 
-            # Check and resolve collisions with blockers
+            # 检查并解决与阻挡者的碰撞
             collision_occurred = False
             if blockers is not None:
                 for b in blockers:
@@ -177,7 +177,7 @@ class Tank(pygame.sprite.Sprite):
                                 break
 
     def can_fire(self, now_ms: int) -> bool:
-        """Check if tank can fire (reloaded)."""
+        """检查坦克是否可以射击（已装填）。"""
         return (now_ms - self._last_shot) >= self.reload_ms
 
     def shoot(
@@ -187,7 +187,7 @@ class Tank(pygame.sprite.Sprite):
         now_ms: int,
         bullet_speed: float = BULLET_SPEED,
     ) -> None:
-        """Shoot a bullet in the current tank orientation."""
+        """沿当前坦克朝向射击子弹。"""
         if not self.can_fire(now_ms):
             return
 
@@ -238,18 +238,18 @@ class Tank(pygame.sprite.Sprite):
         self._last_shot = now_ms
 
     def take_hit(self) -> bool:
-        """Handle tank taking damage. Returns True if destroyed."""
+        """处理坦克受到伤害。如果被摧毁则返回True。"""
         self.health -= 1
         return self.health <= 0
 
     @property
     def alive(self) -> bool:
-        """Check if tank is still alive."""
+        """检查坦克是否仍然存活。"""
         return self.health > 0
 
 
 class Obstacle(pygame.sprite.Sprite):
-    """Static obstacle that blocks tank movement and bullets."""
+    """阻挡坦克移动和子弹的静态障碍物。"""
 
     def __init__(
         self,
