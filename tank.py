@@ -165,45 +165,97 @@ class Tank(pygame.sprite.Sprite):
         # Intended displacement this frame
         dx, dy = (self._move_vector * self.speed * dt)
 
-        # Move horizontally and resolve collisions
-        if dx != 0:
+        # Store original position
+        original_pos = pygame.Vector2(self.position)
+
+        # Try to move diagonally or horizontally
+        if dx != 0 or dy != 0:
             self.position.x += dx
-            self.rect.centerx = round(self.position.x)
-            # Keep within playfield horizontally
+            self.position.y += dy
+            self.rect.center = (round(self.position.x), round(self.position.y))
+
+            # Keep within playfield
             if not self.playfield.contains(self.rect):
                 self.rect.clamp_ip(self.playfield)
                 self.position.x = self.rect.centerx
-            # Collide with blockers (other tanks)
-            if blockers is not None:
-                for b in blockers:
-                    if b is self:
-                        continue
-                    if hasattr(b, "rect") and self.rect.colliderect(b.rect):
-                        if dx > 0:
-                            self.rect.right = b.rect.left
-                        else:
-                            self.rect.left = b.rect.right
-                        self.position.x = self.rect.centerx
-
-        # Move vertically and resolve collisions
-        if dy != 0:
-            self.position.y += dy
-            self.rect.centery = round(self.position.y)
-            # Keep within playfield vertically
-            if not self.playfield.contains(self.rect):
-                self.rect.clamp_ip(self.playfield)
                 self.position.y = self.rect.centery
-            # Collide with blockers (other tanks)
+
+            # Check and resolve collisions with blockers
+            collision_occurred = False
             if blockers is not None:
                 for b in blockers:
                     if b is self:
                         continue
                     if hasattr(b, "rect") and self.rect.colliderect(b.rect):
-                        if dy > 0:
-                            self.rect.bottom = b.rect.top
+                        collision_occurred = True
+                        # Push tanks apart
+                        delta_x = self.rect.centerx - b.rect.centerx
+                        delta_y = self.rect.centery - b.rect.centery
+                        distance = (delta_x**2 + delta_y**2)**0.5
+
+                        if distance > 0:
+                            # Normalize and push away
+                            push_x = delta_x / distance * 2
+                            push_y = delta_y / distance * 2
+
+                            # Only push if we're overlapping
+                            if abs(delta_x) < 35 and abs(delta_y) < 35:
+                                if abs(delta_x) > abs(delta_y):
+                                    self.position.x += push_x
+                                else:
+                                    self.position.y += push_y
+
+                            self.rect.center = (round(self.position.x), round(self.position.y))
+
+            # If still overlapping after resolution, try sliding movement
+            if collision_occurred and blockers is not None:
+                for b in blockers:
+                    if b is self:
+                        continue
+                    if hasattr(b, "rect") and self.rect.colliderect(b.rect):
+                        # Slide movement: try moving only in the dominant direction
+                        if abs(dx) > abs(dy):
+                            # Try only horizontal movement
+                            self.position = pygame.Vector2(original_pos)
+                            self.position.x += dx
+                            self.rect.centerx = round(self.position.x)
+
+                            # Check horizontal collision
+                            horizontal_collision = False
+                            for b2 in blockers:
+                                if b2 is self:
+                                    continue
+                                if hasattr(b2, "rect") and self.rect.colliderect(b2.rect):
+                                    horizontal_collision = True
+                                    if dx > 0:
+                                        self.rect.right = b2.rect.left
+                                    else:
+                                        self.rect.left = b2.rect.right
+                                    self.position.x = self.rect.centerx
+
+                            if not horizontal_collision:
+                                break
                         else:
-                            self.rect.top = b.rect.bottom
-                        self.position.y = self.rect.centery
+                            # Try only vertical movement
+                            self.position = pygame.Vector2(original_pos)
+                            self.position.y += dy
+                            self.rect.centery = round(self.position.y)
+
+                            # Check vertical collision
+                            vertical_collision = False
+                            for b2 in blockers:
+                                if b2 is self:
+                                    continue
+                                if hasattr(b2, "rect") and self.rect.colliderect(b2.rect):
+                                    vertical_collision = True
+                                    if dy > 0:
+                                        self.rect.bottom = b2.rect.top
+                                    else:
+                                        self.rect.top = b2.rect.bottom
+                                    self.position.y = self.rect.centery
+
+                            if not vertical_collision:
+                                break
 
     def can_fire(self, now_ms: int) -> bool:
         return (now_ms - self._last_shot) >= self.reload_ms
