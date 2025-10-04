@@ -107,24 +107,62 @@ class Tank(pygame.sprite.Sprite):
                         continue
                     if hasattr(b, "rect") and self.rect.colliderect(b.rect):
                         collision_occurred = True
-                        # Push tanks apart
-                        delta_x = self.rect.centerx - b.rect.centerx
-                        delta_y = self.rect.centery - b.rect.centery
-                        distance = (delta_x**2 + delta_y**2)**0.5
 
-                        if distance > 0:
-                            # Normalize and push away
-                            push_x = delta_x / distance * COLLISION_PUSH_DISTANCE
-                            push_y = delta_y / distance * COLLISION_PUSH_DISTANCE
+                        # 区分坦克和障碍物的碰撞处理
+                        if hasattr(b, 'health') and hasattr(b, 'speed'):
+                            # 坦克对坦克的碰撞 - 推开机制
+                            delta_x = self.rect.centerx - b.rect.centerx
+                            delta_y = self.rect.centery - b.rect.centery
+                            distance = (delta_x**2 + delta_y**2)**0.5
 
-                            # Only push if we're overlapping
-                            if abs(delta_x) < TANK_COLLISION_THRESHOLD and abs(delta_y) < TANK_COLLISION_THRESHOLD:
-                                if abs(delta_x) > abs(delta_y):
-                                    self.position.x += push_x
+                            if distance > 0:
+                                # 标准化并推开
+                                push_x = delta_x / distance * COLLISION_PUSH_DISTANCE
+                                push_y = delta_y / distance * COLLISION_PUSH_DISTANCE
+
+                                # 只有重叠时才推开
+                                if abs(delta_x) < TANK_COLLISION_THRESHOLD and abs(delta_y) < TANK_COLLISION_THRESHOLD:
+                                    if abs(delta_x) > abs(delta_y):
+                                        self.position.x += push_x
+                                    else:
+                                        self.position.y += push_y
+
+                                self.rect.center = (round(self.position.x), round(self.position.y))
+                        else:
+                            # 坦克对障碍物的碰撞 - 停止机制
+                            # 计算碰撞深度
+                            delta_x = self.rect.centerx - b.rect.centerx
+                            delta_y = self.rect.centery - b.rect.centery
+
+                            # 计算坦克边界到障碍物边界的最近距离
+                            half_tank_width = self.rect.width / 2
+                            half_tank_height = self.rect.height / 2
+                            half_obs_width = b.rect.width / 2
+                            half_obs_height = b.rect.height / 2
+
+                            # 计算中心点之间的最近距离
+                            min_x = half_tank_width + half_obs_width
+                            min_y = half_tank_height + half_obs_height
+
+                            overlap_x = abs(delta_x) - min_x
+                            overlap_y = abs(delta_y) - min_y
+
+                            if overlap_x < 0 or overlap_y < 0:
+                                # 发生重叠，将坦克推离障碍物
+                                if abs(overlap_x) < abs(overlap_y):
+                                    # 水平重叠较多，水平推开
+                                    if delta_x > 0:
+                                        self.rect.left = b.rect.right
+                                    else:
+                                        self.rect.right = b.rect.left
+                                    self.position.x = self.rect.centerx
                                 else:
-                                    self.position.y += push_y
-
-                            self.rect.center = (round(self.position.x), round(self.position.y))
+                                    # 垂直重叠较多，垂直推开
+                                    if delta_y > 0:
+                                        self.rect.top = b.rect.bottom
+                                    else:
+                                        self.rect.bottom = b.rect.top
+                                    self.position.y = self.rect.centery
 
             # If still overlapping after resolution, try sliding movement
             if collision_occurred and blockers is not None:
